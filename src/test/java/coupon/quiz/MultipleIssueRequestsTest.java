@@ -1,6 +1,5 @@
 package coupon.quiz;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static coupon.quiz.QuizHelper.getCoupon;
 
@@ -36,11 +35,19 @@ public class MultipleIssueRequestsTest {
     void setUp() {
         RestAssured.baseURI = BASE_URI;
 
+        // 테스트 시작 전, 쿠폰의 발급 수량을 초기화하여 테스트 환경을 동일하게 만듦
         RestAssured.given()
                 .header(HttpHeaders.CONTENT_TYPE, ContentType.APPLICATION_JSON.getMimeType())
                 .put("/coupons/initialize-issue-count/" + ISSUE_LIMIT_COUPON_ID);
     }
 
+    /**
+     * 여러 회원이 동시에 쿠폰을 발급 요청하는 시나리오 테스트
+     * 총 10명의 회원이 각각 20개의 쿠폰 발급 요청을 동시 수행
+     * - 성공적으로 발급된 쿠폰은 총 150건이어야 함 (발급 제한 반영)
+     * - 전체 요청 수는 200건이어야 함 (10명 * 20개)
+     * - API 호출 후 쿠폰의 실제 발급 수량이 150건과 일치하는지 검증
+     */
     @Test
     void 동시_발급_요청() throws InterruptedException {
         AtomicInteger successCount = new AtomicInteger(0);
@@ -64,6 +71,14 @@ public class MultipleIssueRequestsTest {
         assertThat(issueCount).isEqualTo(150);
     }
 
+    /**
+     * 회원이 쿠폰 발급을 여러 번 요청하는 요청 시뮬레이션 메서드
+     * 요청 카운트와 성공 카운트를 AtomicInteger로 동기화하여 안전하게 증가시킴
+     *
+     * @param memberId 회원 아이디
+     * @param requestCount 총 요청 횟수를 기록하는 AtomicInteger
+     * @param successCount 성공적으로 발급된 횟수를 기록하는 AtomicInteger
+     */
     private static void issueCoupon(int memberId, AtomicInteger requestCount, AtomicInteger successCount) {
         for (int count = 0; count < COUPON_ISSUE_COUNT_PER_MEMBER; count++) {
             String requestBody = "{ \"couponId\": " + ISSUE_LIMIT_COUPON_ID + ", \"memberId\": " + memberId + " }";
